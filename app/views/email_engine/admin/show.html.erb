@@ -1,0 +1,28 @@
+<ul class="actions w900 nav">
+  <li><%= link_to "< Back", admin_index_path, style: "float: left;" %></li>
+</ul>
+</br/>
+<div class="email-content w900">
+  <fieldset>
+    <table class="table table-bordered">
+      <tr><th>Id:</th><td><%= @email.id %></td></tr>
+      <tr><th>To:</th><td><%= @email.to %></td></tr>
+      <tr><th>To:</th><td><%= @email.from %></td></tr>
+      <tr><th>Subject:</th><td><%= @email.subject %></td></tr>
+      <tr><th>Body:</th><td>
+      <% if @email.body %>
+         <%= raw(@email.body) %>
+      <% else %>
+         <%= content_tag(:h4, "Email Preview Unavailable", style: "text-align: center; margin: 20px;") %>
+         <%= content_tag(:p, "Email content was never saved or has expired. Please check the documentation and application confirgation.", style: "text-align: center; margin: 20px;") %>
+      <% end %>
+      </td></tr>
+
+      <tr><th>Sent At:</th><td><%= @email.sent_at %></td></tr>
+      <tr><th>Open At:</th><td><%= @email.open_at %></td></tr>
+      <tr><th>Click At:</th><td><%= @email.click_at %><%= content_tag(:div, link_to(@email.click_url, @email.click_url)) if @email.click_url %></td></tr>
+      <tr><th>Bounce At:</th><td><%= @email.bounce_at %><%= content_tag(:div, @email.bounce_response) if @email.bounce_response %></td></tr>
+      <tr><th>Complaint At:</th><td><%= @email.complaint_at %><%= content_tag(:div, @email.complaint_response) if @email.complaint_response %></td></tr>
+    </table>
+  </fieldset>
+</div>

@@ -1,0 +1,33 @@
+<div id="chart-container"><%= render partial: "email_engine/admin/partials/chart" %></div>
+<div id="navbar" class="navbar-collapse collapse">
+  <ul class="nav navbar-nav navbar-right">
+    <li><b>Show: </b></li>
+    <li><%= select_tag :type, options_for_select([[ "Sent", "sent" ], ["Open", "open"], ["Click", "click"], ["Bounce", "bounce"], ["Complaint", "complaint"]], "sent"), class: 'form-control', style:'display:inline-block;' %>
+  </ul>
+</div>
+<h2><%= params[:query] ? "Emails matching '#{params[:query]}'" : "Recent Sent Emails" %></h2>
+<table class="table table-striped">
+  <tb>
+    <td></td>
+    <td class="visible-lg">ID</td>
+    <td>To</td>
+    <td class="visible-lg visible-md">Subject</td>
+    <td class="visible-lg visible-md">Sent At</td>
+    <td>Actions</td>
+  </tb>
+<% @emails.each do |email| %>
+  <tr>
+    <td width="20"><%= content_tag(:div, '', class: "state #{email.state}", title: email.state.titleize) %></td>
+    <td class="visible-lg"><%= email.id %></td>
+    <td>
+      <b><%= email.to %></b>
+      <div class="visible-xs visible-sm">
+        <small><%= email.subject %></small>
+      </div>
+    </td>
+    <td class="visible-lg visible-md"><%= email.subject %></td>
+    <td class="visible-lg visible-md"><%= Time.parse(email.sent_at).getutc.strftime("%m/%d/%Y %H:%M") if email.sent_at %></td>
+    <td><%= link_to "View", admin_path(email.id), class: 'btn btn-default btn-sm' if email.id %></td>
+  </tr>
+<% end unless (@emails.nil? || @emails.empty?) %>
+</table>

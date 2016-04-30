@@ -1,0 +1,62 @@
+.state{
+  width: 15px;
+  height: 15px;
+  display:block;
+  margin: 5px;
+  border: 1px solid #aaa;
+  border-radius: 20px;
+}
+.state.sent{
+  background-color: #FFDD00;
+}
+.state.open{
+  background-color: #0FD132;
+}
+.state.click{
+  background-color: #79B6E8;
+}
+.state.bounce{
+  background-color: #FF9500;
+}
+.state.complaint{
+  background-color: #E82727;
+}
+a.navbar-brand{
+  margin-right: 20px;
+  color: #000;
+}
+.navbar-brand img{
+ display:inline-block;
+ float: left;
+ margin-right: 10px;
+}
+.date-options{
+  font-size: 12px;
+  font-weight: bold;
+}
+.date-options{
+  margin-top: 10px;
+}
+.navbar-nav>li>a{
+  padding: 5px 10px;
+  border: 1px solid transparent;
+  color: #333;
+}
+.navbar-nav>li>a:hover, .navbar-nav>li.active a{
+  border-radius: 5px;
+  background-color: transparent;
+  border: 1px solid #CCC;
+}
+.navbar-footer {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #CCC;
+}
+.desc{
+  margin-top: 10px;
+  font-size: 12px;
+  font-weight: bold;
+}
+.copy{
+  font-size: 10px;
+}

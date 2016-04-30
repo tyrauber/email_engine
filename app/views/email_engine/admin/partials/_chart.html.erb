@@ -1,0 +1,18 @@
+<div class="vis row">
+  <div class="col-md-10"><div id="graph"></div></div>
+  <div class="col-md-2"><div id="pie"></div></div>
+</div>
+
+<script type="text/javascript">
+
+$('document').ready(function(){
+  EmailEngine.generateGraph();
+  setInterval(function(){
+    if ($('#refresh').is(":checked")){
+      EmailEngine.graph.load({url: EmailEngine.statsUrl()});
+      //EmailEngine.list.load({url: EmailEngine.listUrl()});
+    }
+  }, $('#refresh_interval').val());
+})
+
+</script>
