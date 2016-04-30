@@ -6,10 +6,10 @@ require "email_engine/version"
 Gem::Specification.new do |spec|
   spec.name          = "email_engine"
   spec.version       = EmailEngine::VERSION
-  spec.authors       = ["Ty Rauber", "Andrew Kane"]
-  spec.email         = ["tyrauber@mac.com", "andrew@chartkick.com"]
-  spec.summary       = "Simple, powerful, efficient email tracking with Rails and Redis"
-  spec.description   = "Simple, powerful, efficient email tracking with Rails and Redis"
+  spec.authors       = ["Ty Rauber"]
+  spec.email         = ["tyrauber@mac.com"]
+  spec.summary       = "Send and track emails at scale with Rails, Redis and Amazon SES"
+  spec.description   = "Send and track emails at scale with Rails, Redis and Amazon SES"
   spec.homepage      = "https://github.com/tyrauber/email_engine"
   spec.license       = "MIT"
 
@@ -22,6 +22,7 @@ Gem::Specification.new do |spec|
   spec.add_runtime_dependency "addressable"
   spec.add_runtime_dependency "nokogiri"
   spec.add_runtime_dependency "safely_block"
+  spec.add_runtime_dependency "redis"
 
   spec.add_development_dependency "bundler", "~> 1.6"
   spec.add_development_dependency "rake"

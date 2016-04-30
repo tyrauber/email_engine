@@ -1,31 +1,19 @@
-module Ahoy
+module EmailEngine
   class MessagesController < ActionController::Base
-    before_filter :set_message
+
+    before_action :ses_subscription_confirmation, only: [:bounce, :complaint]
 
     def open
-      if @message
-        @message.opened_at = Time.now unless @message.opened_at
-        if @message.save!
-          @message.increment!(:open_count) if @message.respond_to?(:open_count=)
-        end
-      end
-      publish :open
+      @email = Email.find(params[:id])
+      @email.save!(:open) if @email && !( @email.open || request.referrer.match(ActionMailer::Base.default_url_options[:host]))
       send_data Base64.decode64("R0lGODlhAQABAPAAAAAAAAAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw=="), type: "image/gif", disposition: "inline"
     end
 
     def click
-      if @message
-        unless @message.clicked_at
-          @message.clicked_at = Time.now
-          @message.opened_at ||= @message.clicked_at
-        end
-        if @message.save!
-          @message.increment!(:click_count) if @message.respond_to?(:click_count=)
-        end
-      end
       url = params[:url].to_s
+      @email = Email.find(params[:id])
+      @email.save!(:click, { click_url: url }) if @email && !(@email.click || request.referrer.match(ActionMailer::Base.default_url_options[:host]))
       signature = OpenSSL::HMAC.hexdigest(OpenSSL::Digest.new("sha1"), EmailEngine.secret_token, url)
-      publish :click, url: params[:url]
       if secure_compare(params[:signature], signature)
         redirect_to url
       else
@@ -33,29 +21,47 @@ module Ahoy
       end
     end
 
+    def unsubscribe
+      @email = Email.find(params[:id])
+      EmailEngine::EmailHelper.unsubscribe_method!(@email)
+      redirect_to main_app.root_url
+    end
+
+    def bounce
+      return render json: {} unless aws_message_authentic? && message['notificationType'] == 'Bounce'
+      message['bounce']['bouncedRecipients'].each do |recp|
+        EmailEngine::EmailHelper.bounce_method!(recp)
+        Email.find(params[:id]).save!(:bounce, { bounce_response: recp }) rescue nil
+      end
+      render json: {}
+    end
+
+    def complaint
+      return render json: {} unless aws_message_authentic? && message['notificationType'] == 'Complaint'
+      message['complaint']['complainedRecipients'].each do |recp|
+        EmailEngine::EmailHelper.complaint_method!(recp)
+        Email.find(params[:id]).save!(:complaint, { complaint_response: recp }) rescue nil
+      end
+      render json: {}
+    end
+
     protected
 
-    def set_message
-      @message = EmailEngine.message_model.where(token: params[:id]).first
+    def aws_message_authentic?
+      @aws_message_authentic ||= (Rails.env.test? || Aws::SNS::MessageVerifier.new.authentic?(request.raw_post))
     end
 
-    def publish(name, event = {})
-      EmailEngine.subscribers.each do |subscriber|
-        if subscriber.respond_to?(name)
-          event[:message] = @message
-          event[:controller] = self
-          subscriber.send name, event
-        end
-      end
+    def ses_subscription_confirmation
+      response = open(message["SubscribeURL"]).read if message["SubscribeURL"].present?
     end
 
-    # from https://github.com/rails/rails/blob/master/activesupport/lib/active_support/message_verifier.rb
-    # constant-time comparison algorithm to prevent timing attacks
+    def message
+      @message ||= JSON.parse(JSON.parse(request.raw_post)['Message']) rescue JSON.parse(request.raw_post)
+    end
+
     def secure_compare(a, b)
       return false unless a.bytesize == b.bytesize
-
       l = a.unpack "C#{a.bytesize}"
-
       res = 0
       b.each_byte { |byte| res |= byte ^ l.shift }
       res == 0

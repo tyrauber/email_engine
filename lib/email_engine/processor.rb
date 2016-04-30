@@ -1,6 +1,6 @@
 module EmailEngine
   class Processor
-    attr_reader :message, :mailer, :ahoy_message
+    attr_reader :message, :mailer
 
     UTM_PARAMETERS = %w(utm_source utm_medium utm_term utm_content utm_campaign)
 
@@ -11,87 +11,107 @@ module EmailEngine
 
     def process
       safely do
-        action_name = mailer.action_name.to_sym
-        if options[:message] && (!options[:only] || options[:only].include?(action_name)) && !options[:except].to_a.include?(action_name)
-          @ahoy_message = EmailEngine.message_model.new
-          ahoy_message.token = generate_token
-          ahoy_message.to = Array(message.to).join(", ") if ahoy_message.respond_to?(:to=)
-          ahoy_message.user = options[:user]
-
-          track_open if options[:open]
-          track_links if options[:utm_params] || options[:click]
-
-          ahoy_message.mailer = options[:mailer] if ahoy_message.respond_to?(:mailer=)
-          ahoy_message.subject = message.subject if ahoy_message.respond_to?(:subject=)
-
-          if ahoy_message.respond_to?(:content=)
-            if options[:html_content]
-              ahoy_message.content = message.body.decoded
-            else
-              ahoy_message.content = message.to_s
-            end
-          end
-
-          UTM_PARAMETERS.each do |k|
-            ahoy_message.send("#{k}=", options[k.to_sym]) if ahoy_message.respond_to?("#{k}=")
-          end
-
-          ahoy_message.assign_attributes(options[:extra] || {})
-
-          ahoy_message.save
-          message["Ahoy-Message-Id"] = ahoy_message.id.to_s
-        end
+        message['EMAIL-ENGINE-ID'] = token
+        message['EMAIL-ENGINE-HEADERS'] = mailer.email_engine_options.merge({
+          utm_source: mailer.class.name,
+          utm_campaign: mailer.action_name,
+          utm_term: message.subject.tr('^A-Za-z0-9', '')[0,24],
+          utm_content: token
+        }).to_json
+        message['EMAIL-ENGINE-HEADERS']
       end
     end
 
-    def track_send
+    def deliver
       safely do
-        if (message_id = message["Ahoy-Message-Id"]) && message.perform_deliveries
-          ahoy_message = EmailEngine.message_model.where(id: message_id.to_s).first
-          if ahoy_message
-            ahoy_message.sent_at = Time.now
-            ahoy_message.save
-          end
-          message["Ahoy-Message-Id"] = nil
+        if (message["EMAIL-ENGINE-ID"]) && message.perform_deliveries
+          track_unsubscribe if options[:unsubscribe]
+          track_open if options[:open]
+          track_links if options[:utm_params] || options[:click]
+          track_send if options[:send]
         end
       end
     end
 
     protected
 
+    def default_url
+      @opt ||= EmailEngine::Engine.routes.url_helpers.url_for((ActionMailer::Base.default_url_options || {}).merge(controller: "email_engine/messages", action: "click", id: "$ID$"))
+    end
+
     def options
       @options ||= begin
-        options = EmailEngine.options.merge(mailer.class.ahoy_options)
-        if mailer.ahoy_options
-          options = options.except(:only, :except).merge(mailer.ahoy_options)
-        end
-        options.each do |k, v|
-          if v.respond_to?(:call)
-            options[k] = v.call(message, mailer)
-          end
-        end
+        mailer_options = JSON.parse(message['EMAIL-ENGINE-HEADERS'].value)
+        options = EmailEngine.options.merge!(mailer_options)
+        # if mailer_options
+        #   options = options.except(:only, :except).merge(mailer_options)
+        # end
+        # options.each do |k, v|
+        #   if v.respond_to?(:call)
+        #     options[k] = v.call(message, mailer)
+        #   end
+        # end
         options
       end
     end
 
-    def generate_token
-      SecureRandom.urlsafe_base64(32).gsub(/[\-_]/, "").first(32)
+    def token
+      #SecureRandom.urlsafe_base64(32).gsub(/[\-_]/, "").first(32)
+      #message.__id__
+      #"#{DateTime.now.strftime('%Q')}#{'%04d' % rand(4** 4)}"
+      @token ||= now.strftime('%Q')
+    end
+
+    def message_hash
+      @message_hash ||= JSON.parse(message['EMAIL-ENGINE-HEADERS'].value).merge!({
+        id: message["EMAIL-ENGINE-ID"].value,
+        to: message.to,
+        subject: message.subject,
+        sent_at: now.to_i
+      })
+    end
+
+    def track_send
+      safely do
+        if (message["EMAIL-ENGINE-ID"]) && message.perform_deliveries
+          if !!(EmailEngine.configuration.store_email_headers)
+            @email = Email.new(message)
+            @email.save!
+
+            #@email.increment!(:sent)
+            # EmailEngine.redis.multi do
+            #
+            #   # Email Headers
+            #   EmailEngine.redis.zadd('email_engine:emails', message["EMAIL-ENGINE-ID"], message_hash.to_json)
+            #
+            #   # Email Content
+            #   if !!(EmailEngine.configuration.store_email_content)
+            #     EmailEngine.redis.setex("email_engine:emails:#{message["EMAIL-ENGINE-ID"]}:content", EmailEngine.configuration.expire_email_content.to_i, (message.html_part || message).body)
+            #   end
+            #
+            #   # Email Sent Stats
+            #   date = DateTime.now.strftime("%Y:%m:%d:%H:%M").split(":")
+            #   headers = JSON.parse(message['EMAIL-ENGINE-HEADERS'].value).values
+            #   p "email_engine:stats:#{date.join(":")}"
+            #   date.length.times.each do |i|
+            #     headers.each do |x|
+            #       p ["email_engine:stats:#{date[0,i+1].join(":")}", "#{headers.map { |o| o==x ? "*" : o}.join(":")}:sent"]
+            #       EmailEngine.redis.hincrby("email_engine:stats:#{date[0,i+1].join(":")}", "#{headers.map { |o| o==x ? "*" : o}.join(":")}:sent", 1)
+            #     end
+            #   end
+            # end
+          end
+        end
+      end
     end
 
     def track_open
       if html_part?
         raw_source = (message.html_part || message).body.raw_source
         regex = /<\/body>/i
-        url =
-          url_for(
-            controller: "ahoy/messages",
-            action: "open",
-            id: ahoy_message.token,
-            format: "gif"
-          )
+        id = message["EMAIL-ENGINE-ID"].value
+        url = default_url.gsub("$ID$", id).gsub("/click", "/open.gif")
         pixel = ActionController::Base.helpers.image_tag(url, size: "1x1", alt: nil)
-
-        # try to add before body tag
         if raw_source.match(regex)
           raw_source.gsub!(regex, "#{pixel}\\0")
         else
@@ -100,38 +120,50 @@ module EmailEngine
       end
     end
 
+    def track_unsubscribe
+      if html_part?
+        body = (message.html_part || message).body
+        doc = Nokogiri::HTML(body.raw_source)
+        id = message["EMAIL-ENGINE-ID"].value
+        doc.css("a[href]").each do |link|
+          if link["href"].match("/unsubscribe")
+            uri = parse_uri(link["href"])
+            next unless trackable?(uri)
+            url = default_url.gsub("$ID$", id).gsub("/click", "/unsubscribe")
+            link["href"] = url
+          end
+        end
+        body.raw_source.sub!(body.raw_source, doc.to_s)
+      end
+    end
+
     def track_links
       if html_part?
         body = (message.html_part || message).body
 
         doc = Nokogiri::HTML(body.raw_source)
+        id = message["EMAIL-ENGINE-ID"].value
         doc.css("a[href]").each do |link|
           uri = parse_uri(link["href"])
           next unless trackable?(uri)
-          # utm params first
+
+          params = uri.query_values || {}
           if options[:utm_params] && !skip_attribute?(link, "utm-params")
-            params = uri.query_values || {}
             UTM_PARAMETERS.each do |key|
               params[key] ||= options[key.to_sym] if options[key.to_sym]
             end
-            uri.query_values = params
-            link["href"] = uri.to_s
           end
+          uri.query_values = params
 
           if options[:click] && !skip_attribute?(link, "click")
-            signature = OpenSSL::HMAC.hexdigest(OpenSSL::Digest.new("sha1"), EmailEngine.secret_token, link["href"])
-            link["href"] =
-              url_for(
-                controller: "ahoy/messages",
-                action: "click",
-                id: ahoy_message.token,
-                url: link["href"],
-                signature: signature
-              )
+            redirect_uri = uri.to_s
+            signature = OpenSSL::HMAC.hexdigest(OpenSSL::Digest.new("sha1"), EmailEngine.secret_token, redirect_uri)
+            uri = parse_uri(default_url.gsub("$ID$", id))
+            uri.query_values = { signature: signature, url: redirect_uri }
           end
-        end
 
-        # hacky
+          link["href"] = uri.to_s
+        end
         body.raw_source.sub!(body.raw_source, doc.to_s)
       end
     end
@@ -143,34 +175,19 @@ module EmailEngine
     def skip_attribute?(link, suffix)
       attribute = "data-skip-#{suffix}"
       if link[attribute]
-        # remove it
         link.remove_attribute(attribute)
-        true
-      elsif link["href"].to_s =~ /unsubscribe/i && !options[:unsubscribe_links]
-        # try to avoid unsubscribe links
         true
       else
         false
       end
     end
 
-    # Filter trackable URIs, i.e. absolute one with http
     def trackable?(uri)
       uri && uri.absolute? && %w(http https).include?(uri.scheme)
     end
 
-    # Parse href attribute
-    # Return uri if valid, nil otherwise
     def parse_uri(href)
-      # to_s prevent to return nil from this method
       Addressable::URI.parse(href.to_s) rescue nil
-    end
-
-    def url_for(opt)
-      opt = (ActionMailer::Base.default_url_options || {})
-            .merge(options[:url_options])
-            .merge(opt)
-      EmailEngine::Engine.routes.url_helpers.url_for(opt)
     end
   end
 end

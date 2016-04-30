@@ -1,6 +1,6 @@
-# Ahoy Email
+# EmailEngine
 
-:postbox: Simple, powerful email tracking for Rails
+:postbox: Send and track emails at scale with Rails and Redis
 
 You get:
 
@@ -8,11 +8,7 @@ You get:
 - Open and click tracking
 - Easy UTM tagging
 
-Works with any email service.
-
-:bullettrain_side: To manage unsubscribes, check out [Mailkick](https://github.com/ankane/mailkick)
-
-:fire: To track visits and events, check out [Ahoy](https://github.com/ankane/ahoy)
+Works with any STMP provider but has built in Amazon SES callbacks.
 
 ## Installation
 
@@ -22,251 +18,28 @@ Add this line to your application’s Gemfile:
 gem 'email_engine'
 ```
 
-And run the generator. This creates a model to store messages.
+Generate and modify the initializer:
 
-```sh
+```ruby
 rails generate email_engine:install
-rake db:migrate
 ```
 
 ## How It Works
 
-Ahoy creates an `Ahoy::Message` every time an email is sent by default.
 
-### Users
+The tracking of email headers, content, open and click counts are all handled in Redis.
 
-Ahoy tracks the user a message is sent to - not just the email address.  This gives you a full history of messages for each user, even if he or she changes addresses.
-
-By default, Ahoy tries `User.where(email: message.to.first).first` to find the user.
-
-You can pass a specific user with:
-
-```ruby
-class UserMailer < ActionMailer::Base
-  def welcome_email(user)
-    # ...
-    track user: user
-    mail to: user.email
-  end
-end
-```
-
-The user association is [polymorphic](http://railscasts.com/episodes/154-polymorphic-association), so use it with any model.
-
-To get all messages sent to a user, add an association:
-
-```ruby
-class User < ActiveRecord::Base
-  has_many :messages, class_name: "Ahoy::Message"
-end
-```
-
-And run:
-
-```ruby
-user.messages
-```
-
-### Opens
-
-An invisible pixel is added right before the `</body>` tag in HTML emails.
-
-If the recipient has images enabled in his or her email client, the pixel is loaded and the open time recorded.
-
-Use `track open: false` to skip this.
-
-### Clicks
-
-A redirect is added to links to track clicks in HTML emails.
-
-````
-http://chartkick.com
-```
-
-becomes
-
-```
-http://you.io/ahoy/messages/rAnDoMtOkEn/click?url=http%3A%2F%2Fchartkick.com&signature=...
-```
-
-A signature is added to prevent [open redirects](https://www.owasp.org/index.php/Open_redirect).
-
-Use `track click: false` to skip tracking, or skip specific links with:
-
-```html
-<a data-skip-click="true" href="...">Can't touch this</a>
-```
-
-### UTM Parameters
-
-UTM parameters are added to links if they don’t already exist.
-
-The defaults are:
-
-- utm_medium - `email`
-- utm_source - the mailer name like `user_mailer`
-- utm_campaign - the mailer action like `welcome_email`
-
-Use `track utm_params: false` to skip tagging, or skip specific links with:
-
-
-```html
-<a data-skip-utm-params="true" href="...">Break it down</a>
-```
-
-By default, links with an href matching "unsubscribe" will be ignored. To re-enable tracking on unsubscribe links, use: track unsubscribe_links: true
-
-```ruby
-track unsubscribe_links: true
-```
-
-### Extra Attributes
-
-Create a migration to add extra attributes to the `ahoy_messages` table, for example:
-
-```ruby
-class AddCampaignIdToAhoyMessages < ActiveRecord::Migration
-  def change
-    add_column :ahoy_messages, :campaign_id, :integer
-  end
-end
-```
-
-Then use:
-
-```ruby
-track extra: {campaign_id: 1}
-```
-
-## Customize
-
-### Tracking
-
-Skip tracking of attributes by removing them from your model.  You can safely remove:
-
-- to
-- mailer
-- subject
-- content
-
-### Configuration
-
-There are 3 places to set options. Here’s the order of precedence.
-
-#### Action
-
-``` ruby
-class UserMailer < ActionMailer::Base
-  def welcome_email(user)
-    # ...
-    track user: user
-    mail to: user.email
-  end
-end
-```
-
-#### Mailer
-
-```ruby
-class UserMailer < ActionMailer::Base
-  track utm_campaign: "boom"
-end
-```
-
-#### Global
-
-```ruby
-EmailEngine.track open: false
-```
-
-## Events
-
-Subscribe to open and click events. Create an initializer `config/initializers/email_engine.rb` with:
-
-```ruby
-class EmailSubscriber
-
-  def open(event)
-    # :message and :controller keys
-    ahoy = event[:controller].ahoy
-    ahoy.track "Email opened", message_id: event[:message].id
-  end
-
-  def click(event)
-    # same keys as above, plus :url
-    ahoy = event[:controller].ahoy
-    ahoy.track "Email clicked", message_id: event[:message].id, url: event[:url]
-  end
-
-end
-
-EmailEngine.subscribers << EmailSubscriber.new
-```
-
-## Reference
-
-You can use a `Proc` for any option.
-
-```ruby
-track utm_campaign: proc{|message, mailer| mailer.action_name + Time.now.year }
-```
-
-Disable tracking for an email
-
-```ruby
-track message: false
-```
-
-Or specific actions
-
-```ruby
-track only: [:welcome_email]
-track except: [:welcome_email]
-```
-
-Or by default
-
-```ruby
-EmailEngine.track message: false
-```
-
-Customize domain
-
-```ruby
-track url_options: {host: "mydomain.com"}
-```
-
-Use a different model
-
-```ruby
-EmailEngine.message_model = UserMessage
-```
-
-Or store html content
-
-```ruby
-track html_content: true
-```
-
-## Upgrading
-
-## 3.1
-
-Optionally, track open and click counts by incrementing open_count and click_count on your message model.
-
-### 0.2.3
-
-Optionally, you can store UTM parameters by adding `utm_source`, `utm_medium`, and `utm_campaign` columns to your message model.
-
-## History
-
-View the [changelog](https://github.com/ankane/email_engine/blob/master/CHANGELOG.md)
+Every email has a unique Message Token, which is applied to the email header as "MESSAGE-TOKEN".  Open, click and unsubscribe links use that Message Token to reference the original email.
 
 ## Contributing
 
 Everyone is encouraged to help improve this project. Here are a few ways you can help:
 
-- [Report bugs](https://github.com/ankane/email_engine/issues)
-- Fix bugs and [submit pull requests](https://github.com/ankane/email_engine/pulls)
+- [Report bugs](https://github.com/tyrauber/email_engine/issues)
+- Fix bugs and [submit pull requests](https://github.com/tyrauber/email_engine/pulls)
 - Write, clarify, or fix documentation
 - Suggest or add new features
+
+## Special Thanks
+
+This gem was inspired by, and evolved from, AhoyEmail written by Andrew Kane.
