@@ -59,7 +59,7 @@ module EmailEngine
       #SecureRandom.urlsafe_base64(32).gsub(/[\-_]/, "").first(32)
       #message.__id__
       #"#{DateTime.now.strftime('%Q')}#{'%04d' % rand(4** 4)}"
-      @token ||= now.strftime('%Q')
+      @token ||= DateTime.now.strftime('%Q')
     end
 
     def message_hash
