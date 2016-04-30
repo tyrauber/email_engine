@@ -1,4 +1,4 @@
-module AhoyEmail
+module EmailEngine
   module Mailer
     def self.included(base)
       base.extend ClassMethods
@@ -26,7 +26,7 @@ module AhoyEmail
         return message if @_mail_was_called && headers.blank? && !block
 
         message = super
-        AhoyEmail::Processor.new(message, self).process
+        EmailEngine::Processor.new(message, self).process
         message
       end
     end

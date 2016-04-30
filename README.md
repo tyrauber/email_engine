@@ -19,13 +19,13 @@ Works with any email service.
 Add this line to your application’s Gemfile:
 
 ```ruby
-gem 'ahoy_email'
+gem 'email_engine'
 ```
 
 And run the generator. This creates a model to store messages.
 
 ```sh
-rails generate ahoy_email:install
+rails generate email_engine:install
 rake db:migrate
 ```
 
@@ -176,12 +176,12 @@ end
 #### Global
 
 ```ruby
-AhoyEmail.track open: false
+EmailEngine.track open: false
 ```
 
 ## Events
 
-Subscribe to open and click events. Create an initializer `config/initializers/ahoy_email.rb` with:
+Subscribe to open and click events. Create an initializer `config/initializers/email_engine.rb` with:
 
 ```ruby
 class EmailSubscriber
@@ -200,7 +200,7 @@ class EmailSubscriber
 
 end
 
-AhoyEmail.subscribers << EmailSubscriber.new
+EmailEngine.subscribers << EmailSubscriber.new
 ```
 
 ## Reference
@@ -227,7 +227,7 @@ track except: [:welcome_email]
 Or by default
 
 ```ruby
-AhoyEmail.track message: false
+EmailEngine.track message: false
 ```
 
 Customize domain
@@ -239,7 +239,7 @@ track url_options: {host: "mydomain.com"}
 Use a different model
 
 ```ruby
-AhoyEmail.message_model = UserMessage
+EmailEngine.message_model = UserMessage
 ```
 
 Or store html content
@@ -260,13 +260,13 @@ Optionally, you can store UTM parameters by adding `utm_source`, `utm_medium`, a
 
 ## History
 
-View the [changelog](https://github.com/ankane/ahoy_email/blob/master/CHANGELOG.md)
+View the [changelog](https://github.com/ankane/email_engine/blob/master/CHANGELOG.md)
 
 ## Contributing
 
 Everyone is encouraged to help improve this project. Here are a few ways you can help:
 
-- [Report bugs](https://github.com/ankane/ahoy_email/issues)
-- Fix bugs and [submit pull requests](https://github.com/ankane/ahoy_email/pulls)
+- [Report bugs](https://github.com/ankane/email_engine/issues)
+- Fix bugs and [submit pull requests](https://github.com/ankane/email_engine/pulls)
 - Write, clarify, or fix documentation
 - Suggest or add new features

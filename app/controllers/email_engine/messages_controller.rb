@@ -24,7 +24,7 @@ module Ahoy
         end
       end
       url = params[:url].to_s
-      signature = OpenSSL::HMAC.hexdigest(OpenSSL::Digest.new("sha1"), AhoyEmail.secret_token, url)
+      signature = OpenSSL::HMAC.hexdigest(OpenSSL::Digest.new("sha1"), EmailEngine.secret_token, url)
       publish :click, url: params[:url]
       if secure_compare(params[:signature], signature)
         redirect_to url
@@ -36,11 +36,11 @@ module Ahoy
     protected
 
     def set_message
-      @message = AhoyEmail.message_model.where(token: params[:id]).first
+      @message = EmailEngine.message_model.where(token: params[:id]).first
     end
 
     def publish(name, event = {})
-      AhoyEmail.subscribers.each do |subscriber|
+      EmailEngine.subscribers.each do |subscriber|
         if subscriber.respond_to?(name)
           event[:message] = @message
           event[:controller] = self

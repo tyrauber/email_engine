@@ -1,8 +1,8 @@
-module AhoyEmail
+module EmailEngine
   class Interceptor
     class << self
       def delivering_email(message)
-        AhoyEmail::Processor.new(message).track_send
+        EmailEngine::Processor.new(message).track_send
       end
     end
   end

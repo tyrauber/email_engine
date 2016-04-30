@@ -1,16 +1,16 @@
-require "ahoy_email/version"
+require "email_engine/version"
 require "action_mailer"
 require "rails"
 require "nokogiri"
 require "addressable/uri"
 require "openssl"
 require "safely_block"
-require "ahoy_email/processor"
-require "ahoy_email/interceptor"
-require "ahoy_email/mailer"
-require "ahoy_email/engine"
+require "email_engine/processor"
+require "email_engine/interceptor"
+require "email_engine/mailer"
+require "email_engine/engine"
 
-module AhoyEmail
+module EmailEngine
   mattr_accessor :secret_token, :options, :subscribers
 
   self.options = {
@@ -43,5 +43,5 @@ module AhoyEmail
   end
 end
 
-ActionMailer::Base.send :include, AhoyEmail::Mailer
-ActionMailer::Base.register_interceptor AhoyEmail::Interceptor
+ActionMailer::Base.send :include, EmailEngine::Mailer
+ActionMailer::Base.register_interceptor EmailEngine::Interceptor

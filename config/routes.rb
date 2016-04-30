@@ -1,11 +1,11 @@
 Rails.application.routes.draw do
-  unless respond_to?(:has_named_route?) && has_named_route?("ahoy_email_engine")
-    mount AhoyEmail::Engine => "/ahoy"
+  unless respond_to?(:has_named_route?) && has_named_route?("email_engine")
+    mount EmailEngine::Engine => "/email"
   end
 end
 
-AhoyEmail::Engine.routes.draw do
-  scope module: "ahoy" do
+EmailEngine::Engine.routes.draw do
+  scope module: "email" do
     resources :messages, only: [] do
       get :open, on: :member
       get :click, on: :member

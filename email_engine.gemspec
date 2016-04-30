@@ -1,16 +1,16 @@
 # coding: utf-8
 lib = File.expand_path("../lib", __FILE__)
 $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
-require "ahoy_email/version"
+require "email_engine/version"
 
 Gem::Specification.new do |spec|
-  spec.name          = "ahoy_email"
-  spec.version       = AhoyEmail::VERSION
-  spec.authors       = ["Andrew Kane"]
-  spec.email         = ["andrew@chartkick.com"]
-  spec.summary       = "Simple, powerful email tracking for Rails"
-  spec.description   = "Simple, powerful email tracking for Rails"
-  spec.homepage      = "https://github.com/ankane/ahoy_email"
+  spec.name          = "email_engine"
+  spec.version       = EmailEngine::VERSION
+  spec.authors       = ["Ty Rauber", "Andrew Kane"]
+  spec.email         = ["tyrauber@mac.com", "andrew@chartkick.com"]
+  spec.summary       = "Simple, powerful, efficient email tracking with Rails and Redis"
+  spec.description   = "Simple, powerful, efficient email tracking with Rails and Redis"
+  spec.homepage      = "https://github.com/tyrauber/email_engine"
   spec.license       = "MIT"
 
   spec.files         = `git ls-files -z`.split("\x0")

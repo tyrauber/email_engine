@@ -4,7 +4,7 @@ require "rails/generators/migration"
 require "active_record"
 require "rails/generators/active_record"
 
-module AhoyEmail
+module EmailEngine
   module Generators
     class InstallGenerator < Rails::Generators::Base
       include Rails::Generators::Migration

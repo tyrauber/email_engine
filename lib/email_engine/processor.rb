@@ -1,4 +1,4 @@
-module AhoyEmail
+module EmailEngine
   class Processor
     attr_reader :message, :mailer, :ahoy_message
 
@@ -13,7 +13,7 @@ module AhoyEmail
       safely do
         action_name = mailer.action_name.to_sym
         if options[:message] && (!options[:only] || options[:only].include?(action_name)) && !options[:except].to_a.include?(action_name)
-          @ahoy_message = AhoyEmail.message_model.new
+          @ahoy_message = EmailEngine.message_model.new
           ahoy_message.token = generate_token
           ahoy_message.to = Array(message.to).join(", ") if ahoy_message.respond_to?(:to=)
           ahoy_message.user = options[:user]
@@ -47,7 +47,7 @@ module AhoyEmail
     def track_send
       safely do
         if (message_id = message["Ahoy-Message-Id"]) && message.perform_deliveries
-          ahoy_message = AhoyEmail.message_model.where(id: message_id.to_s).first
+          ahoy_message = EmailEngine.message_model.where(id: message_id.to_s).first
           if ahoy_message
             ahoy_message.sent_at = Time.now
             ahoy_message.save
@@ -61,7 +61,7 @@ module AhoyEmail
 
     def options
       @options ||= begin
-        options = AhoyEmail.options.merge(mailer.class.ahoy_options)
+        options = EmailEngine.options.merge(mailer.class.ahoy_options)
         if mailer.ahoy_options
           options = options.except(:only, :except).merge(mailer.ahoy_options)
         end
@@ -119,7 +119,7 @@ module AhoyEmail
           end
 
           if options[:click] && !skip_attribute?(link, "click")
-            signature = OpenSSL::HMAC.hexdigest(OpenSSL::Digest.new("sha1"), AhoyEmail.secret_token, link["href"])
+            signature = OpenSSL::HMAC.hexdigest(OpenSSL::Digest.new("sha1"), EmailEngine.secret_token, link["href"])
             link["href"] =
               url_for(
                 controller: "ahoy/messages",
@@ -170,7 +170,7 @@ module AhoyEmail
       opt = (ActionMailer::Base.default_url_options || {})
             .merge(options[:url_options])
             .merge(opt)
-      AhoyEmail::Engine.routes.url_helpers.url_for(opt)
+      EmailEngine::Engine.routes.url_helpers.url_for(opt)
     end
   end
 end
