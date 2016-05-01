@@ -7,10 +7,10 @@
 
 $('document').ready(function(){
   EmailEngine.generateGraph();
+  EmailEngine.list.load({url: EmailEngine.list.url()});
   setInterval(function(){
     if ($('#refresh').is(":checked")){
-      EmailEngine.graph.load({url: EmailEngine.statsUrl()});
-      //EmailEngine.list.load({url: EmailEngine.listUrl()});
+      EmailEngine.reload();
     }
   }, $('#refresh_interval').val());
 })

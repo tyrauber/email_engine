@@ -2,17 +2,25 @@ module EmailEngine
   class AdminController < ActionController::Base
     layout "email_engine/application"
 
-    def index
-      params[:type] ||= 'sent'
+    before_filter do
+      # Set Defaults
       params[:limit] ||= 30
-      params[:offser] ||= 0
+      params[:offset] ||= 0
+      params[:start] ||= '-inf'
+      params[:finish] ||= '+inf'
+      params[:last] ||= 'hour'
+      params[:interval] ||= 'minute'
+    end
 
-      if params[:query].present?
-        @emails = EmailEngine::Email.search(params[:query])
-      else
-        @emails = EmailEngine::Email.all(offset: params[:offset], limit: params[:limit])
+    def index
+      if request.format == 'json'
+        if params[:query].present?
+          @emails = EmailEngine::Email.search(params)
+        else
+          @emails = EmailEngine::Email.all(params)
+        end
+        render json: @emails.to_json
       end
-      render json: @emails.to_json if request.format == 'json'
     end
 
     def show
@@ -20,9 +28,6 @@ module EmailEngine
     end
 
     def stats
-      params[:last] ||= 'hour'
-      params[:interval] ||= 'minute'
-      params[:type] ||= '*';
       render json: EmailEngine::Stat.find(params[:last],params[:interval])
     end
   end

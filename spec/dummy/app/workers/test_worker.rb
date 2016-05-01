@@ -10,9 +10,9 @@ class TestWorker
 
     emails.each_with_index do |email, index|
       if !!(delay)
-        email = TestMailer.notify(email, links).deliver_later
+        email = TestMailer.notify(email, links).deliver_later!
       else
-        email = TestMailer.notify(email, links).deliver_now
+        email = TestMailer.notify(email, links).deliver_now!
       end
     end
   end

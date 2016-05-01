@@ -2,6 +2,11 @@ window.EmailEngine = {
   graph: {},
   pie: {},
   totals: {},
+  
+  reload: function(){
+    EmailEngine.graph.load({url: EmailEngine.statsUrl()});
+    EmailEngine.list.load({url: EmailEngine.list.url()});
+  },
 
   statsUrl: function(){
     return '/email/admin/stats?'+$.param({last: $('input#last').val(), interval: $('input#interval').val() });
@@ -82,26 +87,36 @@ window.EmailEngine = {
   },
   list:{
     url: function(){
-      return '/email/admin/sent.json?'+$.param({last: $('input#last').val(), interval: $('input#interval').val() });
+      return '/email/admin.json?'
     },
 
     load: function() {
+      var _this = this;
       $.ajax({
-        url: EmailEngine.list.url(),
+        url:  '/email/admin.json',
         type: 'GET',
+        data:{
+          type: $('#type').val(),
+          last: $('input#last').val(),
+          interval: $('input#interval').val()
+        },
         complete: function( data ) {
-          console.log(data);
-           // data = $.map(data.responseText.split("\n"), function(d){ return [d.split(",")] });
-           // window['EmailEngineData'] = data;
-           // EmailEngine.chart.load({
-           //    data:{
-           //      rows: data,
-           //      xFormat: '%Y-%m-%dT%H:%M:%SZ',
-           //      x: 'x',
-           //    }
-           // });
+          $('table#list').find("tr:gt(1)").remove();
+           data = $.map(JSON.parse(data.responseText).reverse(), function(el){
+             _this.format(el)
+          });
         }
       });
+    },
+    
+    format: function(el){
+      var row = $("<tr style='display:none;'>").append($('<td>').append($("<div class='state "+el.state+"' title='"+el.state+"'/>")))
+      $(row).append($("<td class='visible-lg'>").append(el.id))      
+      $(row).append($("<td>").append($('<div>').html(el.to)).append($('<div>').addClass('visible-xs visible-sm').html($('<small>').html(el.subject))))
+      $(row).append($("<td class='visible-lg visible-md'>").append(el.subject))
+      $(row).append($("<td class='visible-lg visible-md'>").append(el.sent_at))
+      $(row).append($("<td>").append($("<a href='/email/admin/"+el.id+"'>").addClass('btn btn-default btn-sm').text('VIEW')))
+      $(row).insertAfter('table#list .tabs').fadeIn(200);
     }
   }
 }

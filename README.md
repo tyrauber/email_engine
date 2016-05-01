@@ -10,6 +10,8 @@ You get:
 
 Works with any STMP provider but has built in Amazon SES callbacks.
 
+# In Development. Subject to Change
+
 ## Installation
 
 Add this line to your application’s Gemfile:
@@ -26,10 +28,11 @@ rails generate email_engine:install
 
 ## How It Works
 
-
 The tracking of email headers, content, open and click counts are all handled in Redis.
 
-Every email has a unique Message Token, which is applied to the email header as "MESSAGE-TOKEN".  Open, click and unsubscribe links use that Message Token to reference the original email.
+Every email has a unique Message Token, which is applied to the email header as "EMAIL-ENGINE-ID".  Open, click and unsubscribe links use that Message Token to track usage, and stats are generated.
+
+An admin provides the ability to monitor email performance.
 
 ## Contributing
 

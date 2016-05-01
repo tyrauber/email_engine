@@ -11,12 +11,12 @@ module EmailEngine
 
     def process
       safely do
-        message['EMAIL-ENGINE-ID'] = token
+        message['EMAIL-ENGINE-ID'] = token.dup
         message['EMAIL-ENGINE-HEADERS'] = mailer.email_engine_options.merge({
           utm_source: mailer.class.name,
           utm_campaign: mailer.action_name,
           utm_term: message.subject.tr('^A-Za-z0-9', '')[0,24],
-          utm_content: token
+          utm_content: message['EMAIL-ENGINE-ID']
         }).to_json
         message['EMAIL-ENGINE-HEADERS']
       end
@@ -58,8 +58,8 @@ module EmailEngine
     def token
       #SecureRandom.urlsafe_base64(32).gsub(/[\-_]/, "").first(32)
       #message.__id__
-      #"#{DateTime.now.strftime('%Q')}#{'%04d' % rand(4** 4)}"
-      @token ||= DateTime.now.strftime('%Q')
+      #@token ||= "#{DateTime.now.strftime('%Q')}.#{'%04d' % rand(4** 4)}"
+      @token ||= "#{DateTime.now.strftime('%Q')}"
     end
 
     def message_hash

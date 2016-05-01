@@ -31,11 +31,6 @@
           <%= content_tag(:li, link_to("Last Month", admin_index_path({last: 'month', interval: 'day'})), class: (params[:last] == 'month' ? 'active' : '')) %>
           <%= content_tag(:li, link_to("Last Year", admin_index_path({last: 'year', interval: 'month'})), class: (params[:last] == 'year' ? 'active' : '')) %>
         </ul>
-        <form class="navbar-form navbar-left">
-          <%= text_field_tag :search, nil, value: (params[:query] ? params[:query] : ''), placeholder: 'Search...', class: 'form-control', onkeydown: "EmailEngine.search(this);" %>
-          <%= text_field_tag :last, nil, value: (params[:last]||'hour'), class: 'form-control', style: 'display:none;' %>
-          <%= text_field_tag :interval, nil, value: (params[:interval]||'minute'), class: 'form-control', style: 'display:none;' %>
-        </form>
       </div>
     </div>
   </nav>

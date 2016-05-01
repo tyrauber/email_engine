@@ -1,20 +1,27 @@
 <div id="chart-container"><%= render partial: "email_engine/admin/partials/chart" %></div>
-<div id="navbar" class="navbar-collapse collapse">
-  <ul class="nav navbar-nav navbar-right">
-    <li><b>Show: </b></li>
-    <li><%= select_tag :type, options_for_select([[ "Sent", "sent" ], ["Open", "open"], ["Click", "click"], ["Bounce", "bounce"], ["Complaint", "complaint"]], "sent"), class: 'form-control', style:'display:inline-block;' %>
-  </ul>
-</div>
-<h2><%= params[:query] ? "Emails matching '#{params[:query]}'" : "Recent Sent Emails" %></h2>
-<table class="table table-striped">
-  <tb>
-    <td></td>
+<br/>
+
+</br/>
+<table id="list" class="table table-striped" style="margin-bottom:0px;">
+  <tr>
+  <form class="navbar-form navbar-left">
+    <td colspan="2"><%= text_field_tag :search, nil, value: (params[:query] ? params[:query] : ''), placeholder: 'Search...', class: 'form-control', onkeydown: "EmailEngine.search(this);" %></td>
+    <td><%= select_tag :type, options_for_select([[ "Sent", "sent" ], ["Open", "open"], ["Click", "click"], ["Bounce", "bounce"], ["Complaint", "complaint"]], (params[:type]||'sent')), class: 'form-control', onchange: "EmailEngine.reload();" %>
+    <%= text_field_tag :last, nil, value: (params[:last]||'hour'), class: 'form-control', style: 'display:none;' %>
+    <%= text_field_tag :interval, nil, value: (params[:interval]||'minute'), class: 'form-control', style: 'display:none;' %></td>
+    <td colspan="2"></td>
+  </form>
+  </tr>
+</table>
+<table id="list" class="table table-striped">
+  <tr class='tabs'>
+    <td width="20"></td>
     <td class="visible-lg">ID</td>
     <td>To</td>
     <td class="visible-lg visible-md">Subject</td>
     <td class="visible-lg visible-md">Sent At</td>
     <td>Actions</td>
-  </tb>
+  </tr>
 <% @emails.each do |email| %>
   <tr>
     <td width="20"><%= content_tag(:div, '', class: "state #{email.state}", title: email.state.titleize) %></td>
