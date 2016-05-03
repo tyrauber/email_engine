@@ -1,6 +1,6 @@
 module EmailEngine
   class Email
-    attr_accessor :id, :to, :from, :subject, :headers, :click_url, :bounce_response, :complaint_response
+    attr_accessor :id, :to, :from, :subject, :utm_parameters, :extra_attributes, :click_url, :bounce_response, :complaint_response
     attr_accessor :sent_at, :open_at, :click_at, :bounce_at, :complaint_at
     attr_accessor :sent, :open, :click, :bounce, :complaint, :state
      
@@ -9,7 +9,8 @@ module EmailEngine
       @to = message['to'].try(:value) || message['to']
       @from = message['from'].try(:value) || message['from']
       @subject = message['subject'].try(:value) || message['subject']
-      @headers = message['headers']  || JSON.parse(message['EMAIL-ENGINE-HEADERS'].try(:value) || '{}')
+      @utm_parameters = message['utm_parameters']  || JSON.parse(message['EMAIL-ENGINE-UTM-PARAMETERS'].try(:value) || '{}')
+      @extra_attributes = message['extra_attributes']  || JSON.parse(message['EMAIL-ENGINE-EXTRA-ATTRIBUTES'].try(:value) || '{}')
       ['sent', 'open', 'click', 'bounce', 'complaint'].each do |action|
         if message["#{action}_at"]
           instance_variable_set("@#{action}_at", message["#{action}_at"])
@@ -44,15 +45,11 @@ module EmailEngine
       id = self.id.freeze
       EmailEngine.redis.multi do
         EmailEngine.redis.zadd(self.class.table_name('search'), id, self.to_json) if action == :sent # Scan & match
-        #p "SHOULD update hget #{self.class.table_name} #{id}"
-        #EmailEngine.redis.zadd(self.class.table_name(action.to_s), id, self.to_json) # Paginate
-        #p "SHOULD ADD zrangebyscore #{self.class.table_name}:#{action} #{id} #{id}"
         EmailEngine.redis.hset(self.class.table_name, id, self.to_json) # Updateable
         self.class.date_formats.each do |k,d|
           EmailEngine.redis.hincrby("email_engine:stats:per_#{k}", "#{action}/#{date.strftime(d)}", 1) # Dates
         end
       end
-      test! if action == :sent
     end
 
     def body

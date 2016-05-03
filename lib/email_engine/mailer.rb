@@ -6,7 +6,10 @@ module EmailEngine
       base.class_eval do
         attr_accessor :email_engine_options
         class_attribute :email_engine_options
-        self.email_engine_options = {}
+
+        def self.email_engine_options
+          @options ||= EmailEngine.options
+        end
       end
     end
 

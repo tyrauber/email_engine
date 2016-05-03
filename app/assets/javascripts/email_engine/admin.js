@@ -5,7 +5,7 @@ function EmailEngine(opts={}){
   this.totals = {}
 
   this.reload =  function(){
-    var url = window.location.href + "/stats.json"
+    var url = window.location.href.split("?")[0] + "/stats.json?"+ window.location.href.split("?")[1]
     this.graph.load({url: url});
     this.list.load();
   }
@@ -36,7 +36,7 @@ function EmailEngine(opts={}){
   
   this.generateGraph = function(){
     var _this = this;
-    var url = window.location.href + "/stats.json"
+    var url = window.location.href.split("?")[0] + "/stats.json"
     this.graph= c3.generate({
       bindto: '#graph',
       data: {
@@ -89,7 +89,7 @@ function EmailEngine(opts={}){
     load: function(url) {
       var _this = this;
       $.ajax({
-        url: window.location.href+".json",
+        url: window.location.href.split("?")[0]+".json",
         type: 'GET',
         data:{
           type: $('#type').val(),
@@ -113,7 +113,7 @@ function EmailEngine(opts={}){
       $(row).append($("<td>").append($('<div>').html(el.to)).append($('<div>').addClass('visible-xs visible-sm').html($('<small>').html(el.subject))))
       $(row).append($("<td class='visible-lg visible-md'>").append(el.subject))
       $(row).append($("<td class='visible-lg visible-md'>").append(el.sent_at))
-      $(row).append($("<td>").append($("<a href='"+window.location.href+"/"+el.id+"'>").addClass('btn btn-default btn-sm').text('VIEW')))
+      $(row).append($("<td>").append($("<a href='"+window.location.href.split("?")[0]+"/"+el.id+"'>").addClass('btn btn-default btn-sm').text('VIEW')))
       $('table#list tbody').append(row);
     }
   }
@@ -123,7 +123,7 @@ function EmailEngine(opts={}){
   this.reload()
   setInterval(function(){
     if ($('#refresh').is(":checked")){
-      $('table#list').find("tr:gt(1)").remove()
+      $('table#list').find("tr:gt(0)").remove()
       $('input#offset').val("0")
       EmailEngine.reload();
     }

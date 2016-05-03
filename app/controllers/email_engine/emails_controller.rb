@@ -3,10 +3,12 @@ module EmailEngine
 
     layout "email_engine/application"
 
-    before_filter do
-      current_ability.merge(Ability.new(current_user))
+    if respond_to?('load_and_authorize_resource')
+      before_filter do
+        current_ability.merge(Ability.new(current_user))
+      end
+      load_and_authorize_resource class: Email, except: [:success, :bounce, :complaint]
     end
-    load_and_authorize_resource class: Email, except: [:success, :bounce, :complaint]
     before_action :ses_subscription_confirmation, only: [:success, :bounce, :complaint]
 
     before_filter only: [:index, :stats] do

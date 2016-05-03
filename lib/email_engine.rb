@@ -47,12 +47,13 @@ module EmailEngine
       @unsubscribe = true
       @unsubscribe_method = nil
       @utm_params = true
-      @utm_source = nil
-      @utm_medium = "email"
+      @utm_source = proc { |message, mailer| mailer.mailer_name }
+      @utm_medium =  "email"
       @utm_term = nil
       @utm_content = nil
-      @utm_campaign = nil
-      @mailer = nil
+      @utm_campaign = proc { |message, mailer| mailer.action_name }
+      @user = proc { |message, mailer| (message.to.size == 1 ? User.where(email: message.to.first).first : nil) rescue nil }
+      @mailer = proc { |message, mailer| "#{mailer.class.name}##{mailer.action_name}" }
       @url_options = {}
       @redis_url = "redis://localhost:6379/"
       redis_uri ||= URI.parse(@redis_url)
@@ -66,8 +67,8 @@ module EmailEngine
       hash
     end
   end
+
+  ActionMailer::Base.send :include, EmailEngine::Mailer
+  ActionMailer::Base.register_interceptor EmailEngine::Interceptor
 end
 
-
-ActionMailer::Base.send :include, EmailEngine::Mailer
-ActionMailer::Base.register_interceptor EmailEngine::Interceptor
