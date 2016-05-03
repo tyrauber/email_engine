@@ -11,52 +11,59 @@ require "email_engine/mailer"
 require "email_engine/engine"
 
 module EmailEngine
-  mattr_accessor :secret_token, :options
 
-  self.options = {
-    redis_url: "redis://localhost:6379/",
-    send: true,
-    open: true,
-    click: true,
-    unsubscribe: true,
-    unsubscribe_method: nil,
-    utm_params: true,
-    utm_source: nil,
-    utm_medium: "email",
-    utm_term: nil,
-    utm_content: nil,
-    utm_campaign: nil,
-    mailer: nil,
-    url_options: {}
-  }
+  mattr_accessor :secret_token, :options
+  
+  def self.options
+    self.configuration.to_h
+  end
 
   def self.track(options)
     self.options = self.options.merge(options)
   end
-
+  
   def self.redis
-    uri ||= URI.parse(options[:redis_url])
-    @redis ||= Redis.new(:host => uri.host, :port => uri.port, :password => uri.password)
+    self.configuration.redis
   end
 
   class << self
     attr_accessor :configuration
   end
 
-  def self.configure
+  def self.configure(&block)
     self.configuration ||= Configuration.new
     yield(configuration)
   end
 
   class Configuration
-    attr_accessor :redis_url, :store_email_headers, :store_email_content, :expire_email_headers, :expire_email_content, :unsubscribe_method
+    attr_accessor :send, :open, :click, :unsubscribe, :unsubscribe_method, :url_options,
+    :utm_params, :utm_source, :utm_medium, :utm_term, :utm_content, :utm_campaign, :mailer, 
+    :redis_url, :redis, :store_email_content, :expire_email_content, :unsubscribe_method
 
     def initialize
+      @send = true
+      @open = true
+      @click = true
+      @unsubscribe = true
+      @unsubscribe_method = nil
+      @utm_params = true
+      @utm_source = nil
+      @utm_medium = "email"
+      @utm_term = nil
+      @utm_content = nil
+      @utm_campaign = nil
+      @mailer = nil
+      @url_options = {}
       @redis_url = "redis://localhost:6379/"
-      @store_email_headers = true
+      redis_uri ||= URI.parse(@redis_url)
+      @redis ||= Redis.new(:host => redis_uri.host, :port => redis_uri.port, :password => redis_uri.password)
       @store_email_content = true
-      @expire_email_headers = false
       @expire_email_content = false
+    end
+
+    def to_h(hash={})
+      instance_variables.each {|var| hash[var.to_s.delete("@").to_sym] = instance_variable_get(var) }
+      hash
     end
   end
 end

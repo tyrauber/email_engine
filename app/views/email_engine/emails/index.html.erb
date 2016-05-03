@@ -1,19 +1,21 @@
-<div id="chart-container"><%= render partial: "email_engine/admin/partials/chart" %></div>
+<div id="chart-container"><%= render partial: "email_engine/emails/partials/chart" %></div>
 <br/>
 
 </br/>
-<table id="list" class="table table-striped" style="margin-bottom:0px;">
+<table class="table table-striped" style="margin-bottom:0px;">
   <tr>
   <form class="navbar-form navbar-left">
     <td colspan="2"><%= text_field_tag :search, nil, value: (params[:query] ? params[:query] : ''), placeholder: 'Search...', class: 'form-control', onkeydown: "EmailEngine.search(this);" %></td>
     <td><%= select_tag :type, options_for_select([[ "Sent", "sent" ], ["Open", "open"], ["Click", "click"], ["Bounce", "bounce"], ["Complaint", "complaint"]], (params[:type]||'sent')), class: 'form-control', onchange: "EmailEngine.reload();" %>
     <%= text_field_tag :last, nil, value: (params[:last]||'hour'), class: 'form-control', style: 'display:none;' %>
     <%= text_field_tag :interval, nil, value: (params[:interval]||'minute'), class: 'form-control', style: 'display:none;' %></td>
+    <%= text_field_tag :limit, nil, value: (params[:limit]||30), class: 'form-control', style: 'display:none;' %>
+    <%= text_field_tag :offset, nil, value: (params[:offset]||0), class: 'form-control', style: 'display:none;' %></td>
     <td colspan="2"></td>
   </form>
   </tr>
 </table>
-<table id="list" class="table table-striped">
+<table id="list" class="table table-striped" style="margin-bottom:0px;">
   <tr class='tabs'>
     <td width="20"></td>
     <td class="visible-lg">ID</td>
@@ -34,7 +36,12 @@
     </td>
     <td class="visible-lg visible-md"><%= email.subject %></td>
     <td class="visible-lg visible-md"><%= Time.parse(email.sent_at).getutc.strftime("%m/%d/%Y %H:%M") if email.sent_at %></td>
-    <td><%= link_to "View", admin_path(email.id), class: 'btn btn-default btn-sm' if email.id %></td>
+    <td><%= link_to "View", email_path(email.id), class: 'btn btn-default btn-sm' if email.id %></td>
   </tr>
 <% end unless (@emails.nil? || @emails.empty?) %>
+</table>
+<table class="table table-striped">
+  <tr>
+    <td><%= link_to("Load More", '', class: 'btn btn-default btn-lg', onclick: "EmailEngine.reload();return false;") %></td>
+  </tr>
 </table>

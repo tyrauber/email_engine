@@ -1,18 +1,52 @@
 module EmailEngine
-  class MessagesController < ActionController::Base
+  class EmailsController < ActionController::Base
 
-    before_action :ses_subscription_confirmation, only: [:bounce, :complaint]
+    layout "email_engine/application"
 
+    before_filter do
+      current_ability.merge(Ability.new(current_user))
+    end
+    load_and_authorize_resource class: Email, except: [:success, :bounce, :complaint]
+    before_action :ses_subscription_confirmation, only: [:success, :bounce, :complaint]
+
+    before_filter only: [:index, :stats] do
+      params[:limit] ||= 30
+      params[:offset] ||= 0
+      params[:start] ||= '-inf'
+      params[:finish] ||= '+inf'
+      params[:last] ||= 'hour'
+      params[:interval] ||= 'minute'
+    end
+
+    def index
+      if request.format == 'json'
+        if params[:query].present?
+          @emails = EmailEngine::Email.search(params)
+        else
+          @emails = EmailEngine::Email.all(params)
+        end
+        render json: @emails.to_json
+      end
+    end
+
+    def show
+      @email = EmailEngine::Email.find(params[:id])
+    end
+
+    def stats
+      render json: EmailEngine::Stat.find(params[:last],params[:interval])
+    end
+    
     def open
       @email = Email.find(params[:id])
-      @email.save!(:open) if @email && !( @email.open || request.referrer.match(ActionMailer::Base.default_url_options[:host]))
+      @email.save!(:open) if @email && !( @email.open || (request.referrer && request.referrer.match(ActionMailer::Base.default_url_options[:host])))
       send_data Base64.decode64("R0lGODlhAQABAPAAAAAAAAAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw=="), type: "image/gif", disposition: "inline"
     end
 
     def click
       url = params[:url].to_s
       @email = Email.find(params[:id])
-      @email.save!(:click, { click_url: url }) if @email && !(@email.click || request.referrer.match(ActionMailer::Base.default_url_options[:host]))
+      @email.save!(:click, { click_url: url }) if @email && !(@email.click || (request.referrer && request.referrer.match(ActionMailer::Base.default_url_options[:host])))
       signature = OpenSSL::HMAC.hexdigest(OpenSSL::Digest.new("sha1"), EmailEngine.secret_token, url)
       if secure_compare(params[:signature], signature)
         redirect_to url
@@ -24,7 +58,14 @@ module EmailEngine
     def unsubscribe
       @email = Email.find(params[:id])
       EmailEngine::EmailHelper.unsubscribe_method!(@email)
-      redirect_to main_app.root_url
+    end
+
+    def success
+      return render json: {} unless aws_message_authentic? && message['notificationType'] == 'Success'
+      message['success']['bouncedRecipients'].each do |recp|
+        EmailEngine::EmailHelper.success_method!(recp)
+      end
+      render json: {}
     end
 
     def bounce

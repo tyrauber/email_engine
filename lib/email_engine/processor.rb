@@ -13,8 +13,10 @@ module EmailEngine
       safely do
         message['EMAIL-ENGINE-ID'] = token.dup
         message['EMAIL-ENGINE-HEADERS'] = mailer.email_engine_options.merge({
-          utm_source: mailer.class.name,
+          utm_medium: 'email',
+          utm_source: mailer.class.name.gsub!(/(.)([A-Z])/,'\1_\2').downcase,
           utm_campaign: mailer.action_name,
+          mailer: [mailer.class.name, mailer.action_name].join("#"),
           utm_term: message.subject.tr('^A-Za-z0-9', '')[0,24],
           utm_content: message['EMAIL-ENGINE-ID']
         }).to_json
@@ -29,6 +31,7 @@ module EmailEngine
           track_open if options[:open]
           track_links if options[:utm_params] || options[:click]
           track_send if options[:send]
+          message['EMAIL-ENGINE-HEADERS'] = nil
         end
       end
     end
@@ -36,7 +39,7 @@ module EmailEngine
     protected
 
     def default_url
-      @opt ||= EmailEngine::Engine.routes.url_helpers.url_for((ActionMailer::Base.default_url_options || {}).merge(controller: "email_engine/messages", action: "click", id: "$ID$"))
+      @opt ||= EmailEngine::Engine.routes.url_helpers.url_for((ActionMailer::Base.default_url_options || {}).merge(controller: "email_engine/emails", action: "click", id: "$ID$"))
     end
 
     def options
@@ -74,7 +77,6 @@ module EmailEngine
     def track_send
       safely do
         if (message["EMAIL-ENGINE-ID"]) && message.perform_deliveries
-          if !!(EmailEngine.configuration.store_email_headers)
             @email = Email.new(message)
             @email.save!
 
@@ -100,7 +102,6 @@ module EmailEngine
             #     end
             #   end
             # end
-          end
         end
       end
     end

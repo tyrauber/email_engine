@@ -26,7 +26,7 @@ end
 
 class MailerTest < Minitest::Test
   def setup
-    Ahoy::Message.delete_all
+    EmailEngine.redis.flushall
   end
 
   def test_basic
@@ -34,27 +34,28 @@ class MailerTest < Minitest::Test
   end
 
   def test_prevent_delivery
-    assert_message :welcome2
+    message = UserMailer.send(:welcome2)
+    message.respond_to?(:deliver_now) ? message.deliver_now! : message.deliver
     if Rails.version >= "4.0.0"
-      assert_nil Ahoy::Message.first.sent_at
+      assert_equal false, EmailEngine.redis.hexists('email_engine:email', message['EMAIL-ENGINE-ID'])
     end
   end
 
   def test_no_message
-    UserMailer.welcome3.to
-    assert_equal 0, Ahoy::Message.count
+    message = UserMailer.welcome3
+    assert_equal false, EmailEngine.redis.hexists('email_engine:email', message['EMAIL-ENGINE-ID'])
   end
 
   def assert_message(method)
     message = UserMailer.send(method)
-    message.respond_to?(:deliver_now) ? message.deliver_now : message.deliver
-    ahoy_message = Ahoy::Message.first
-    assert_equal 1, Ahoy::Message.count
-    assert_equal "test@example.org", ahoy_message.to
-    assert_equal "UserMailer##{method}", ahoy_message.mailer
-    assert_equal "Hello", ahoy_message.subject
-    assert_equal "user_mailer", ahoy_message.utm_source
-    assert_equal "email", ahoy_message.utm_medium
-    assert_equal method.to_s, ahoy_message.utm_campaign
+    message.respond_to?(:deliver_now) ? message.deliver_now! : message.deliver
+    assert_equal true, EmailEngine.redis.hexists('email_engine:email', message['EMAIL-ENGINE-ID'])
+    email =  EmailEngine::Email.find(message['EMAIL-ENGINE-ID'])
+    assert_equal "test@example.org", email.to
+    assert_equal "UserMailer##{method}", email.mailer
+    assert_equal "Hello", email.subject
+    assert_equal "user_mailer", email.utm_source
+    assert_equal "email", email.utm_medium
+    assert_equal method.to_s, email.utm_campaign
   end
 end

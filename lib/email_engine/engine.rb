@@ -5,9 +5,6 @@ module EmailEngine
     initializer "email_engine" do |app|
       secrets = app.respond_to?(:secrets) ? app.secrets : app.config
       EmailEngine.secret_token ||= secrets.respond_to?(:secret_key_base) ? secrets.secret_key_base : secrets.secret_token
-      config.to_prepare do
-        ApplicationController.helper(::ApplicationHelper)
-      end
     end
   end
 end

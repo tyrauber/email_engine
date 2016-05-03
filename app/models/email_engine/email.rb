@@ -61,7 +61,11 @@ module EmailEngine
 
     def body=(value)
       if !!(value.present? && EmailEngine.configuration.store_email_content)
-        EmailEngine.redis.setex("email_engine:content:#{self.id}", EmailEngine.configuration.expire_email_content.to_i, value)
+        if !!(EmailEngine.configuration.expire_email_content)
+          EmailEngine.redis.setex("email_engine:content:#{self.id}", EmailEngine.configuration.expire_email_content.to_i, value)
+        else
+          EmailEngine.redis.set("email_engine:content:#{self.id}", value)
+        end
         self.body = nil
       end
     end
@@ -82,40 +86,6 @@ module EmailEngine
     end
 
     protected
-
-    # def setup_autocomplete
-    #   # Zrangebylex autocomplete
-    #   # zrangebylex email_engine:email:autocomplete - +
-    #   # zrangebylex email_engine:email:autocomplete [query +
-    #   if action == :sent
-    #     hash = [{to: @to}, {subject: @subject}, @headers].reduce(&:merge)
-    #     hash.each do |k,v|
-    #       EmailEngine.redis.zadd("#{self.class.table_name}:autocomplete", 0, "#{CGI.escape(v.downcase)}:#{self.id}")
-    #     end
-    #   end
-    # end
-    
-    # def autocomplete(query, cursor=0, limit=30)
-    #   keys = EmailEngine.redis.zrangebylex("#{table_name}:autocomplete", "[#{query}", "+").map{|k| k.split(":").last }
-    #   records = EmailEngine.redis.hmget(table_name, keys.uniq.map(&:to_i)) unless keys.empty?
-    #   unless records.empty?
-    #     emails = records.map{|record| Email.new(JSON.parse(record)) }
-    #   else
-    #     return []
-    #   end
-    # end
-    #
-    # def search(query, cursor=0, limit=30)
-    #   records = EmailEngine.redis.zscan(table_name, cursor, match: "*#{query}*", count: limit)
-    #   #Rails.logger.info "zscan #{table_name} #{cursor} MATCH *#{query}* COUNT #{limit}"
-    #   #keys = EmailEngine.redis.zscan(table_name, cursor, match: "*#{query}*", count: limit)
-    #   #records = EmailEngine.redis.hmget(table_name, keys.map(&:to_i)) unless keys.empty?
-    #   unless records.empty?
-    #     emails = records[1].map{|record| Email.new(JSON.parse(record[0])) }
-    #   else
-    #     return []
-    #   end
-    # end
 
     class << self
 
@@ -138,10 +108,10 @@ module EmailEngine
       def all(opts={}, records= [], response=[])
         opts[:offset] ||= 0
         opts[:limit] ||= 30
+        opts[:order] ||= 'desc'
         while
           #p "zrevrangebyscore #{table_name('search')} #{opts[:finish]||"+inf"} #{opts[:start]||"-inf"} COUNT #{opts[:offset]||0} #{opts[:limit]||30} withscores"
-          keys = EmailEngine.redis.zrevrangebyscore("#{table_name('search')}", (opts[:finish]||"+inf"), (opts[:start]||"-inf"), limit: [opts[:offset], opts[:limit]], withscores: true).to_h.values
-          #p "hmget #{table_name} #{keys.map(&:to_i).join(" ")}"
+          keys = EmailEngine.redis.send((opts[:order] == 'desc' ? :zrevrangebyscore : :zrangebyscore), "#{table_name('search')}", (opts[:finish]||"+inf"), (opts[:start]||"-inf"), limit: [opts[:offset], opts[:limit]], withscores: true).to_h.values
           records = keys.empty? ? [] : EmailEngine.redis.hmget(table_name, keys.map(&:to_i))
           records.compact.each do |record| 
             response.push filter_response(record, opts)
@@ -162,11 +132,19 @@ module EmailEngine
       end
 
       def find(id)
-        all(start: id, finish: id).first
+        new(JSON.parse(EmailEngine.redis.hmget(table_name, id).try(:first) || "{}"))
       end
 
       def last(opts={})
         all({start: '-inf', finish: '+inf', offset: 0, limit: 1}).first
+      end
+
+      def first(opts={})
+        all({start: '+inf', finish: '-inf', offset: 0, limit: 1, order: 'asc'}).first
+      end
+
+      def count(min='-inf', max='+inf')
+        EmailEngine.redis.zcount("#{table_name('search')}", min, max)
       end
     end
   end

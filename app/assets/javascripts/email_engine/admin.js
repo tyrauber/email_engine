@@ -1,18 +1,16 @@
-window.EmailEngine = {
-  graph: {},
-  pie: {},
-  totals: {},
-  
-  reload: function(){
-    EmailEngine.graph.load({url: EmailEngine.statsUrl()});
-    EmailEngine.list.load({url: EmailEngine.list.url()});
-  },
+function EmailEngine(opts={}){
+  this.url = opts['url']
+  this.graph =  {}
+  this.pie = {}
+  this.totals = {}
 
-  statsUrl: function(){
-    return '/email/admin/stats?'+$.param({last: $('input#last').val(), interval: $('input#interval').val() });
-  },
+  this.reload =  function(){
+    var url = window.location.href + "/stats.json"
+    this.graph.load({url: url});
+    this.list.load();
+  }
 
-  generatePie: function(){
+  this.generatePie = function(){
     var _this = this;
     var colors ={}
     colors['Sent ('+ _this.totals['sent'] + ')'] = '#FFDD00'
@@ -34,15 +32,16 @@ window.EmailEngine = {
         colors: colors
       }  
     })
-  },
+  }
   
-  generateGraph: function(){
+  this.generateGraph = function(){
     var _this = this;
+    var url = window.location.href + "/stats.json"
     this.graph= c3.generate({
       bindto: '#graph',
       data: {
         //rows: [['x','sent','open','click','bounce','complaint']],
-        url: EmailEngine.statsUrl(),
+        url: url,
         xFormat: '%Y-%m-%dT%H:%M:%SZ',
         x: 'x',
         colors: {
@@ -66,9 +65,9 @@ window.EmailEngine = {
         }
       }
     })
-  },
+  }
 
-  sumChartData: function(data=[]){
+  this.sumChartData = function(data=[]){
     var _this = this;
     _this.totals = { sent: 0, unread: 0, open: 0, click: 0, bounce: 0, complaint: 0 };
     data.forEach(function(el){
@@ -78,67 +77,55 @@ window.EmailEngine = {
       });
     });
     _this.generatePie();
-  },
+  }
 
-  search: function(el) {
+  this.search = function(el) {
     if(event.keyCode == 13) {
       document.location = document.location.href.split('?')[0]+"?query="+encodeURIComponent(el.value);
     }
-  },
-  list:{
-    url: function(){
-      return '/email/admin.json?'
-    },
+  }
 
-    load: function() {
+  this.list = {
+    load: function(url) {
       var _this = this;
       $.ajax({
-        url:  '/email/admin.json',
+        url: window.location.href+".json",
         type: 'GET',
         data:{
           type: $('#type').val(),
           last: $('input#last').val(),
-          interval: $('input#interval').val()
+          interval: $('input#interval').val(),
+          limit: $('input#limit').val(),
+          offset: $('input#offset').val()
         },
         complete: function( data ) {
-          $('table#list').find("tr:gt(1)").remove();
-           data = $.map(JSON.parse(data.responseText).reverse(), function(el){
+           data = $.map(JSON.parse(data.responseText), function(el){
              _this.format(el)
           });
+          $('input#offset').val(Number($('input#offset').val())+Number($('input#limit').val()));
         }
       });
     },
     
     format: function(el){
-      var row = $("<tr style='display:none;'>").append($('<td>').append($("<div class='state "+el.state+"' title='"+el.state+"'/>")))
+      var row = $("<tr>").append($('<td>').append($("<div class='state "+el.state+"' title='"+el.state+"'/>")))
       $(row).append($("<td class='visible-lg'>").append(el.id))      
       $(row).append($("<td>").append($('<div>').html(el.to)).append($('<div>').addClass('visible-xs visible-sm').html($('<small>').html(el.subject))))
       $(row).append($("<td class='visible-lg visible-md'>").append(el.subject))
       $(row).append($("<td class='visible-lg visible-md'>").append(el.sent_at))
-      $(row).append($("<td>").append($("<a href='/email/admin/"+el.id+"'>").addClass('btn btn-default btn-sm').text('VIEW')))
-      $(row).insertAfter('table#list .tabs').fadeIn(200);
+      $(row).append($("<td>").append($("<a href='"+window.location.href+"/"+el.id+"'>").addClass('btn btn-default btn-sm').text('VIEW')))
+      $('table#list tbody').append(row);
     }
   }
-}
 
-
-/*function load(){
-  console.log("load")
-  window['EmailEngineData'] = {};
-  $.ajax({
-    url: EmailEngine.url(),
-    type: 'GET',
-    complete: function( data ) {
-       data = $.map(data.responseText.split("\n"), function(d){ return [d.split(",")] });
-       window['EmailEngineData'] = data;
-       EmailEngine.chart.load({
-          data:{
-            rows: data,
-            xFormat: '%Y-%m-%dT%H:%M:%SZ',
-            x: 'x',
-          }
-       });
+  // Initialization
+  this.generateGraph()
+  this.reload()
+  setInterval(function(){
+    if ($('#refresh').is(":checked")){
+      $('table#list').find("tr:gt(1)").remove()
+      $('input#offset').val("0")
+      EmailEngine.reload();
     }
-  });
+  }, $('#refresh_interval').val());
 }
-window.EmailEngine.load = load;*/
