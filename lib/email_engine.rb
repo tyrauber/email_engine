@@ -55,7 +55,7 @@ module EmailEngine
       @user = proc { |message, mailer| (message.to.size == 1 ? User.where(email: message.to.first).first : nil) rescue nil }
       @mailer = proc { |message, mailer| "#{mailer.class.name}##{mailer.action_name}" }
       @url_options = {}
-      @redis_url = "redis://localhost:6379/"
+      @redis_url ||= "redis://localhost:6379/"
       redis_uri ||= URI.parse(@redis_url)
       @redis ||= Redis.new(:host => redis_uri.host, :port => redis_uri.port, :password => redis_uri.password)
       @store_email_content = true
