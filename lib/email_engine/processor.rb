@@ -98,9 +98,9 @@ module EmailEngine
         doc.css("a[href]").each do |link|
           if link["href"].match("/unsubscribe")
             uri = parse_uri(link["href"])
-            next unless trackable?(uri)
-            url = default_url.gsub("$ID$", id).gsub("/click", "/unsubscribe")
-            link["href"] = url
+            params = (uri.query_values || {}).merge!(email_id: id)
+            uri.query_values = params
+            link["href"] = uri.to_s
           end
         end
         body.raw_source.sub!(body.raw_source, doc.to_s)
