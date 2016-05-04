@@ -40,6 +40,7 @@ Rails.application.configure do
   config.action_mailer.delivery_method = :file
   config.action_mailer.file_settings = { :location => File.join(Dummy::Application.root, 'tmp/emails') }
   config.active_job.queue_adapter = :sidekiq
+  config.assets.precompile += %w( email_engine/email_engine.js email_engine/email_engine.css )
 
   # Raises error for missing translations
   # config.action_view.raise_on_missing_translations = true
