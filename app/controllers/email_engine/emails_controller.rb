@@ -3,11 +3,15 @@ module EmailEngine
 
     layout "email_engine/application"
 
+    rescue_from CanCan::AccessDenied do |exception|
+      redirect_to main_app.root_url, :alert => exception.message
+    end
+
     if respond_to?('load_and_authorize_resource')
       before_filter do
         current_ability.merge(Ability.new(current_user))
       end
-      load_and_authorize_resource class: Email, except: [:success, :bounce, :complaint]
+      load_and_authorize_resource class: Email, only: [:index, :show, :stats]
     end
     before_action :ses_subscription_confirmation, only: [:success, :bounce, :complaint]
 
