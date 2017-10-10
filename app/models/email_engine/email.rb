@@ -107,8 +107,8 @@ module EmailEngine
         opts[:limit] ||= 30
         opts[:order] ||= 'desc'
         while
-          #p "zrevrangebyscore #{table_name('search')} #{opts[:finish]||"+inf"} #{opts[:start]||"-inf"} COUNT #{opts[:offset]||0} #{opts[:limit]||30} withscores"
-          keys = EmailEngine.redis.send((opts[:order] == 'desc' ? :zrevrangebyscore : :zrangebyscore), "#{table_name('search')}", (opts[:finish]||"+inf"), (opts[:start]||"-inf"), limit: [opts[:offset], opts[:limit]], withscores: true).to_h.values
+          # p "zrevrangebyscore #{table_name('search')} #{opts[:finish]||"+inf"} #{opts[:start]||"-inf"} COUNT #{opts[:offset]||0} #{opts[:limit]||30} withscores"
+          keys = EmailEngine.redis.send((opts[:order] == 'desc' ? :zrevrangebyscore : :zrangebyscore), "#{table_name('search')}", (opts[:finish]||"+inf"), (opts[:start]||"-inf"), limit: [opts[:offset].to_i, opts[:limit].to_i], withscores: true).to_h.values
           records = keys.empty? ? [] : EmailEngine.redis.hmget(table_name, keys.map(&:to_i))
           records.compact.each do |record| 
             response.push filter_response(record, opts)
