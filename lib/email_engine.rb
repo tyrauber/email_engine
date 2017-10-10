@@ -33,6 +33,9 @@ module EmailEngine
   def self.configure(&block)
     self.configuration ||= Configuration.new
     yield(configuration)
+    self.configuration.redis_url ||= "redis://localhost:6379/"
+    redis_uri ||= URI.parse(self.configuration.redis_url)
+    self.configuration.redis ||= Redis.new(:host => redis_uri.host, :port => redis_uri.port, :password => redis_uri.password)
   end
 
   class Configuration
@@ -55,9 +58,6 @@ module EmailEngine
       @user = proc { |message, mailer| (message.to.size == 1 ? User.where(email: message.to.first).first : nil) rescue nil }
       @mailer = proc { |message, mailer| "#{mailer.class.name}##{mailer.action_name}" }
       @url_options = {}
-      @redis_url ||= "redis://localhost:6379/"
-      redis_uri ||= URI.parse(@redis_url)
-      @redis ||= Redis.new(:host => redis_uri.host, :port => redis_uri.port, :password => redis_uri.password)
       @store_email_content = true
       @expire_email_content = false
     end
