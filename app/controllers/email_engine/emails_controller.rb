@@ -44,15 +44,15 @@ module EmailEngine
     end
     
     def open
-      @email = Email.find(params[:id])
-      @email.save!(:open) if @email && !( @email.open || (request.referrer && request.referrer.match(ActionMailer::Base.default_url_options[:host])))
+      # @email = Email.find(params[:id])
+      # @email.save!(:open) if @email && !( @email.open || (request.referrer && request.referrer.match(ActionMailer::Base.default_url_options[:host])))
       send_data Base64.decode64("R0lGODlhAQABAPAAAAAAAAAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw=="), type: "image/gif", disposition: "inline"
     end
 
     def click
       url = params[:url].to_s
-      @email = Email.find(params[:id])
-      @email.save!(:click, { click_url: url }) if @email && !(@email.click || (request.referrer && request.referrer.match(ActionMailer::Base.default_url_options[:host])))
+      # @email = Email.find(params[:id])
+      # @email.save!(:click, { click_url: url }) if @email && !(@email.click || (request.referrer && request.referrer.match(ActionMailer::Base.default_url_options[:host])))
       signature = OpenSSL::HMAC.hexdigest(OpenSSL::Digest.new("sha1"), EmailEngine.secret_token, url)
       if secure_compare(params[:signature], signature)
         redirect_to url
